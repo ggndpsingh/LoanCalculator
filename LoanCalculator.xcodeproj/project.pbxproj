@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		54228F9425D1208B00DFF93D /* HomeLoanForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54228F9325D1208B00DFF93D /* HomeLoanForm.swift */; };
+		54228F9525D1208B00DFF93D /* HomeLoanForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54228F9325D1208B00DFF93D /* HomeLoanForm.swift */; };
 		54B4FE6325C964DA001F77D8 /* Tests_iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54B4FE6225C964DA001F77D8 /* Tests_iOS.swift */; };
 		54B4FE6E25C964DA001F77D8 /* Tests_macOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54B4FE6D25C964DA001F77D8 /* Tests_macOS.swift */; };
 		54B4FE7025C964DA001F77D8 /* LoanCalculatorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54B4FE4725C964D9001F77D8 /* LoanCalculatorApp.swift */; };
@@ -37,6 +39,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		54228F9325D1208B00DFF93D /* HomeLoanForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeLoanForm.swift; sourceTree = "<group>"; };
 		54B4FE4725C964D9001F77D8 /* LoanCalculatorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoanCalculatorApp.swift; sourceTree = "<group>"; };
 		54B4FE4825C964D9001F77D8 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		54B4FE4925C964DA001F77D8 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -104,6 +107,7 @@
 				54B4FE4725C964D9001F77D8 /* LoanCalculatorApp.swift */,
 				54B4FE8825C964F0001F77D8 /* HomeLoan.swift */,
 				54B4FE4825C964D9001F77D8 /* ContentView.swift */,
+				54228F9325D1208B00DFF93D /* HomeLoanForm.swift */,
 				54B4FE4925C964DA001F77D8 /* Assets.xcassets */,
 			);
 			path = Shared;
@@ -312,6 +316,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				54228F9425D1208B00DFF93D /* HomeLoanForm.swift in Sources */,
 				54B4FE8925C964F0001F77D8 /* HomeLoan.swift in Sources */,
 				54B4FE7225C964DA001F77D8 /* ContentView.swift in Sources */,
 				54B4FE7025C964DA001F77D8 /* LoanCalculatorApp.swift in Sources */,
@@ -322,6 +327,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				54228F9525D1208B00DFF93D /* HomeLoanForm.swift in Sources */,
 				54B4FE8A25C964F0001F77D8 /* HomeLoan.swift in Sources */,
 				54B4FE7325C964DA001F77D8 /* ContentView.swift in Sources */,
 				54B4FE7125C964DA001F77D8 /* LoanCalculatorApp.swift in Sources */,

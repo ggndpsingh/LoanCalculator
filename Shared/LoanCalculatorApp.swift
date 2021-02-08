@@ -11,7 +11,9 @@ import SwiftUI
 struct LoanCalculatorApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            HomeLoanForm()
+//            ContentView(loan: .init(loanAmount: 650000, term: .fixed(FixedTerm(duration: 30, rate: 1.99))))
+//            ContentView(loan: .init(loanAmount: 650000, term: .mix(.init(totalDuration: 30, fixedDuration: 4, fixedRate: 1.99, variableRate: 3.85))))
         }
     }
 }

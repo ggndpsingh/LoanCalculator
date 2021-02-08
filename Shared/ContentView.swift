@@ -8,27 +8,9 @@
 import SwiftUI
 
 struct ContentView: View {
+    @Environment(\.presentationMode) private var presentationMode
 
-    @State private var loanAmount: String = "650000"
-    @State private var interestRate: String = "1.99"
-    @State private var duration: String = "120"
-
-    var loan: HomeLoan {
-        .init(loanAmount: 650000, term: .months(360), interest: .mix((48, 1.99), 3.85))
-//        .init(loanAmount: 650000, term: .months(360), interest: .fixed(1.99))
-    }
-
-    private var loanA: Double {
-        let formatter = NumberFormatter()
-        let loan = formatter.number(from: loanAmount)?.doubleValue ?? 0
-        print(loan)
-        return loan
-    }
-
-    private var interest: Double {
-        let formatter = NumberFormatter()
-        return formatter.number(from: interestRate)?.doubleValue ?? 0
-    }
+    let loan: HomeLoan
 
     fileprivate func cellText(_ text: String) -> some View {
         return Text(text)
@@ -41,28 +23,7 @@ struct ContentView: View {
         NavigationView {
             ScrollView {
                 VStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Loan Amount")
-                        TextField("100,000", text: $loanAmount)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                    }
-                    .padding()
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Interest Rate")
-                        TextField("1.99", text: $interestRate)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                    }
-                    .padding()
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Duration (Months)")
-                        TextField("120", text: $duration)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                    }
-                    .padding()
-
-                    Text("\(loan.loanAmount.currencyString) for \(loan.term.description)")
+                    Text("\(loan.loanAmount.currencyString) \(loan.term.description)")
 
                     HStack {
                         Text("Total Payable")
@@ -79,8 +40,9 @@ struct ContentView: View {
                     }
 
                     let data = loan.table.map { DataPoint(value: $0.balance) }
+                    let extraData = loan.extraTable.map { DataPoint(value: $0.balance) }
 
-                    LineChart(term: loan.term, dataPoints: data)
+                    LineChart(term: loan.term, dataPoints: data, extraDataPoints: extraData)
                         .frame(height: 200)
                         .padding()
 
@@ -114,8 +76,8 @@ struct ContentView: View {
                             .padding(.vertical)
                             .background(row.id.isMultiple(of: 2) ? Color.white : Color.gray.opacity(0.1))
 
-                            if (row.id > 0 && row.id < loan.term.value && row.id.isMultiple(of: 12)) {
-                                let remaining = Int((loan.term.value - row.id) / 12)
+                            if (row.id > 0 && row.id < loan.term.totalDuration && row.id.isMultiple(of: 12)) {
+                                let remaining = Int((loan.term.totalDuration - row.id) / 12)
                                 Text("\(remaining) years remaining: \(row.balance.currencyString)")
                                     .font(.caption)
                                     .padding(.vertical, 4)
@@ -127,13 +89,18 @@ struct ContentView: View {
                 }
             }
             .navigationTitle("Loan Details")
+            .navigationBarItems(trailing:
+                Button("Done") {
+                    presentationMode.wrappedValue.dismiss()
+                }
+            )
         }
     }
 }
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-        ContentView()
+        ContentView(loan: .init(loanAmount: 150000, term: .fixed(.init(duration: 5, rate: 2.00))))
     }
 }
 
@@ -166,15 +133,16 @@ struct DataPoint {
 }
 
 struct LineChartShape: Shape {
-    let dataPoints: [DataPoint]
-    let pointSize: CGFloat
+    let drawDataPoints: [DataPoint]
+    let sizeDataPoints: [DataPoint]
     let maxValue: Double
+    let pointSize: CGFloat = 5
 
-    init(dataPoints: [DataPoint], pointSize: CGFloat) {
-        self.dataPoints = dataPoints
-        self.pointSize = pointSize
+    init(drawDataPoints: [DataPoint], sizeDataPoints: [DataPoint]) {
+        self.drawDataPoints = drawDataPoints
+        self.sizeDataPoints = sizeDataPoints
 
-        let highestPoint = dataPoints.max { $0.value < $1.value }
+        let highestPoint = sizeDataPoints.max { $0.value < $1.value }
         maxValue = highestPoint?.value ?? 1
     }
 
@@ -182,10 +150,10 @@ struct LineChartShape: Shape {
         var path = Path()
         let drawRect = rect.insetBy(dx: pointSize, dy: pointSize)
 
-        let xMultiplier = drawRect.width / CGFloat(dataPoints.count - 1)
+        let xMultiplier = drawRect.width / CGFloat(sizeDataPoints.count - 1)
         let yMultiplier = drawRect.height / CGFloat(maxValue)
 
-        for (index, dataPoint) in dataPoints.enumerated() {
+        for (index, dataPoint) in drawDataPoints.enumerated() {
             var x = xMultiplier * CGFloat(index)
             var y = yMultiplier * CGFloat(dataPoint.value)
             y = drawRect.height - y
@@ -207,36 +175,24 @@ struct LineChartShape: Shape {
 struct LineChart: View {
     let term: Term
     let dataPoints: [DataPoint]
-    let lineColor: Color
-    let lineWidth: CGFloat
-    let pointSize: CGFloat
+    let extraDataPoints: [DataPoint]
 
     let maxValue: Int
 
-    init(term: Term, dataPoints: [DataPoint], lineColor: Color = Color.blue, lineWidth: CGFloat = 4, pointSize: CGFloat = 5) {
+    init(term: Term, dataPoints: [DataPoint], extraDataPoints: [DataPoint] = []) {
         self.term = term
         self.dataPoints = dataPoints
-        self.lineColor = lineColor
-        self.lineWidth = lineWidth
-        self.pointSize = pointSize
+        self.extraDataPoints = extraDataPoints
 
         maxValue = Int(dataPoints.max { $0.value < $1.value }?.value ?? 1)
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 0) {
-                VStack(spacing: 0) {
-                    ForEach((1...5).reversed(), id: \.self) { i in
-                        let val = maxValue / 5 * i
-                        Text(String(val))
-                        Spacer()
-                    }
-                    Text("")
-                }
+        VStack(alignment: .leading) {
+            Text(String(dataPoints[0].value.currencyString))
                 .font(.caption)
-                .padding([.trailing])
 
+            HStack(spacing: 0) {
                 ZStack {
                     VStack(spacing: 0) {
                         ForEach(1...5, id: \.self) { _ in
@@ -249,25 +205,33 @@ struct LineChart: View {
                             .frame(height: 1 / UIScreen.main.scale)
                             .opacity(0.4)
 
-                        HStack {
-                            let count = term.value / 12 / 5
-                            ForEach(0...count, id: \.self) { i in
-                                Text(String(i * 5))
-                                    .font(.caption)
-                                if i < count {
-                                    Spacer()
-                                }
-                            }
-                        }
-                        .padding(.top)
+//                        HStack {
+//                            let count = term.totalDuration / 12 / 5
+//                            ForEach(0...count, id: \.self) { i in
+//                                Text(String(i * 5))
+//                                    .font(.caption)
+//                                if i < count {
+//                                    Spacer()
+//                                }
+//                            }
+//                        }
+//                        .padding(.top)
                     }
 
-                    if lineColor != .clear {
-                        LineChartShape(dataPoints: dataPoints, pointSize: pointSize)
-                            .stroke(lineColor, lineWidth: lineWidth)
-                            .padding(.bottom, 36)
-                    }
+                    LineChartShape(drawDataPoints: dataPoints, sizeDataPoints: dataPoints)
+                        .stroke(Color.gray, lineWidth: 2)
+//                        .padding(.bottom, 26)
+
+                    LineChartShape(drawDataPoints: extraDataPoints, sizeDataPoints: dataPoints)
+                        .stroke(Color.yellow, lineWidth: 2)
+//                        .padding(.bottom, 26)
                 }
+            }
+
+            HStack {
+                Text("Today").font(.caption)
+                Spacer()
+                Text("\((dataPoints.count - 1)/12) Years").font(.caption)
             }
         }
     }

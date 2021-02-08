@@ -5,39 +5,26 @@ import SwiftUI
 class HomeLoan {
     let loanAmount: Double
     let term: Term
-    let interest: Interest
 
     var repayments: [Double] = []
     var table: [TableRow] = [] {
         didSet {
             totalInterest = table.map { $0.interest }.reduce(0, +)
+            repayments = table.map { $0.repayment }
         }
     }
+
+    var extraTable: [TableRow] = []
 
     var totalInterest: Double = 0
 
     var repaymentType: Repayment = .fixed(0)
 
-    init(loanAmount: Double, term: Term, interest: Interest, repayments: [Double] = []) {
+    init(loanAmount: Double, term: Term) {
         self.loanAmount = loanAmount
         self.term = term
-        self.interest = interest
-        self.repayments = repayments
 
         makeRepayments()
-    }
-
-    func monthlyInterestRate(for month: Int) -> Double {
-        switch interest {
-        case .fixed(let val):
-            return val / 12 /  100
-        case .mix(let fixed, let variable):
-            if month <= fixed.0 {
-                return fixed.1  / 12 /  100
-            }
-
-            return variable / 12 /  100
-        }
     }
 
     var totalLoan: Double {
@@ -49,33 +36,33 @@ class HomeLoan {
     }
 
     func makeRepayments() {
-        switch interest {
-        case .fixed(let val):
-            let rate = val / 12 / 100
-            let over = loanAmount * rate * term.doubleValue
-            let under = 1 - Double(truncating: NSDecimalNumber(value: pow(1 + rate, -term.doubleValue)))
+        switch term {
+        case .fixed(let term):
+            let rate = term.rate / 12 / 100
+            let duration = self.term.totalDuration
+            let over = loanAmount * rate * duration.doubleValue
+            let under = 1 - Double(truncating: NSDecimalNumber(value: pow(1 + rate, -duration.doubleValue)))
             let totalLoan = over / under
-            let repayment = totalLoan / term.doubleValue
+            let repayment = totalLoan / duration.doubleValue
 
             repaymentType = .fixed(repayment)
-            repayments = Array(repeating: repayment, count: term.value)
-            table = [TableRow(id: 0, interest: 0, repayment: 0, balance: loanAmount)] + createLoanTable(for: loanAmount, rate: rate, term: term.value, repayment: repayment)
+            table = [TableRow(id: 0, interest: 0, repayment: 0, balance: loanAmount)] + createLoanTable(for: loanAmount, rate: rate, term: duration, repayment: repayment)
+            extraTable = [TableRow(id: 0, interest: 0, repayment: 0, balance: loanAmount)] + createLoanTable(for: loanAmount, rate: rate, term: duration, repayment: 3000)
 
-        case .mix(let fixed, let variable):
-            let fixedRate = fixed.1 / 12 / 100
-            let fixedOver = loanAmount * fixedRate * term.doubleValue
-            let fixedUnder = 1 - Double(truncating: NSDecimalNumber(value: pow(1 + fixedRate, -term.doubleValue)))
+        case .mix(let term):
+            let fixedRate = term.fixedRate / 12 / 100
+            let duration = self.term.totalDuration
+            let fixedOver = loanAmount * fixedRate * duration.doubleValue
+            let fixedUnder = 1 - Double(truncating: NSDecimalNumber(value: pow(1 + fixedRate, -duration.doubleValue)))
             let fixedTotal = fixedOver / fixedUnder
-            let fixedMonthly = (fixedTotal / term.doubleValue).round(to: 2)
+            let fixedMonthly = (fixedTotal / duration.doubleValue).round(to: 2)
 
-            self.repayments = Array(repeating: fixedMonthly, count: fixed.0)
+            let remainingTerm = duration.doubleValue - Double(term.fixedDuration)
 
-            let remainingTerm = term.doubleValue - Double(fixed.0)
-
-            let fixedTable = Array(createLoanTable(for: loanAmount, rate: fixedRate, term: term.value, repayment: fixedMonthly).prefix(fixed.0))
+            let fixedTable = Array(createLoanTable(for: loanAmount, rate: fixedRate, term: duration, repayment: fixedMonthly).prefix(term.fixedDuration))
             let balance = fixedTable.last?.balance ?? 0
 
-            let variableRate = variable / 12 / 100
+            let variableRate = term.variableRate / 12 / 100
             let variableOver = balance * variableRate * remainingTerm
             let variableUnder = 1 - Double(truncating: NSDecimalNumber(value: pow(1 + variableRate, -remainingTerm)))
             let variableTotal = variableOver / variableUnder
@@ -83,16 +70,14 @@ class HomeLoan {
             let remaining = variableTotal
             let variableMonthly = (remaining / remainingTerm).round(to: 2)
 
-            let variableTable = createLoanTable(for: balance, rate: variableRate, term: Int(remainingTerm), repayment: variableMonthly, startIndex: fixed.0)
+            let variableTable = createLoanTable(for: balance, rate: variableRate, term: Int(remainingTerm), repayment: variableMonthly, startIndex: term.fixedDuration)
 
             repaymentType = .mix(fixedMonthly, variableMonthly)
-            repayments.append(contentsOf: Array(repeating: variableMonthly, count: Int(remainingTerm)))
             table = [TableRow(id: 0, interest: 0, repayment: 0, balance: loanAmount)] + fixedTable + variableTable
         }
     }
 
     func createLoanTable(for amount: Double, rate: Double, term: Int, repayment: Double, startIndex: Int = 0) -> [TableRow] {
-        guard !repayments.isEmpty else { return [] }
         var balance = amount
         var payment = repayment
 
@@ -121,30 +106,54 @@ class HomeLoan {
 }
 
 enum Term: CustomStringConvertible {
-    case years(Int)
-    case months(Int)
+    case fixed(FixedTerm)
+    case mix(MixedTerm)
 
-    var value: Int {
+    var totalDuration: Int {
         switch self {
-        case .months(let val):
-            return val
-        case .years(let val):
-            return val * 12
+        case .fixed(let val):
+            return val.duration * 12
+        case .mix(let val):
+            return val.totalDuration * 12
         }
     }
 
-    var doubleValue: Double {
-        Double(value)
+    func monthlyInterestRate(for month: Int) -> Double {
+        switch self {
+        case .fixed(let term):
+            return term.rate / 12 /  100
+        case .mix(let term):
+            if month <= term.fixedDuration {
+                return term.fixedRate  / 12 /  100
+            }
+
+            return term.variableRate / 12 /  100
+        }
     }
 
     var description: String {
         switch self {
-        case .months(let val):
-            return "\(val) Months"
-        case .years(let val):
-            return "\(val) Years"
+        case .fixed(let term):
+            return "at \(term.rate) for \(term.duration) years"
+        case .mix(let term):
+            return """
+            at \(term.fixedRate) for \(term.fixedDuration) years
+            then at \(term.variableRate) for \(term.totalDuration - term.fixedDuration) years
+            """
         }
     }
+}
+
+struct FixedTerm {
+    let duration: Int
+    let rate: Double
+}
+
+struct MixedTerm {
+    let totalDuration: Int
+    let fixedDuration: Int
+    let fixedRate: Double
+    let variableRate: Double
 }
 
 enum Interest {
@@ -184,4 +193,8 @@ extension Double {
         let divisor = pow(10.0, Double(places))
         return (self * divisor).rounded(.up) / divisor
     }
+}
+
+extension Int {
+    var doubleValue: Double { Double(self) }
 }
