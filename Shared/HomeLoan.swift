@@ -8,7 +8,15 @@ class HomeLoan {
     let interest: Interest
 
     var repayments: [Double] = []
-    var table: [TableRow] = []
+    var table: [TableRow] = [] {
+        didSet {
+            totalInterest = table.map { $0.interest }.reduce(0, +)
+        }
+    }
+
+    var totalInterest: Double = 0
+
+    var repaymentType: Repayment = .fixed(0)
 
     init(loanAmount: Double, term: Term, interest: Interest, repayments: [Double] = []) {
         self.loanAmount = loanAmount
@@ -48,8 +56,10 @@ class HomeLoan {
             let under = 1 - Double(truncating: NSDecimalNumber(value: pow(1 + rate, -term.doubleValue)))
             let totalLoan = over / under
             let repayment = totalLoan / term.doubleValue
-            self.repayments = Array(repeating: repayment, count: term.value)
-            self.table = createLoanTable(for: loanAmount, rate: rate, term: term.value, repayment: repayment)
+
+            repaymentType = .fixed(repayment)
+            repayments = Array(repeating: repayment, count: term.value)
+            table = [TableRow(id: 0, interest: 0, repayment: 0, balance: loanAmount)] + createLoanTable(for: loanAmount, rate: rate, term: term.value, repayment: repayment)
 
         case .mix(let fixed, let variable):
             let fixedRate = fixed.1 / 12 / 100
@@ -72,29 +82,30 @@ class HomeLoan {
 
             let remaining = variableTotal
             let variableMonthly = (remaining / remainingTerm).round(to: 2)
-            self.repayments.append(contentsOf: Array(repeating: variableMonthly, count: Int(remainingTerm)))
 
             let variableTable = createLoanTable(for: balance, rate: variableRate, term: Int(remainingTerm), repayment: variableMonthly, startIndex: fixed.0)
 
-            var table = fixedTable
-            table.append(contentsOf: variableTable)
-
-            self.table = table
+            repaymentType = .mix(fixedMonthly, variableMonthly)
+            repayments.append(contentsOf: Array(repeating: variableMonthly, count: Int(remainingTerm)))
+            table = [TableRow(id: 0, interest: 0, repayment: 0, balance: loanAmount)] + fixedTable + variableTable
         }
     }
 
     func createLoanTable(for amount: Double, rate: Double, term: Int, repayment: Double, startIndex: Int = 0) -> [TableRow] {
         guard !repayments.isEmpty else { return [] }
         var balance = amount
+        var payment = repayment
 
         var index = startIndex + 1
         var table: [TableRow] = []
-        for _ in 0..<term {
+        while balance > 5 {
             let interest = balance * rate
-            let newBalance = balance - repayment + interest
-            balance = newBalance >= 5 ? newBalance.round(to: 2) : 0
+            let newBalance = balance + interest
+            payment = min(newBalance, repayment)
+            balance = newBalance - payment
+            balance = balance >= 5 ? balance.round(to: 2) : 0
 
-            table.append(.init(id: index, interest: interest, repayment: repayment, balance: balance))
+            table.append(.init(id: index, interest: interest, repayment: payment, balance: balance))
             index += 1
         }
 
@@ -146,6 +157,20 @@ enum Interest {
 
     init(fixedTerm: Int, fixedRate: Double, variableRate: Double) {
         self = .mix((fixedTerm, fixedRate), variableRate)
+    }
+}
+
+enum Repayment: CustomStringConvertible {
+    case fixed(Double)
+    case mix(Double, Double)
+
+    var description: String {
+        switch self {
+        case .fixed(let val):
+            return val.currencyString + "/ month"
+        case .mix(let fixed, let after):
+            return fixed.currencyString + " during fixed period\n" + after.currencyString + " after fixed period"
+        }
     }
 }
 
