@@ -4,7 +4,10 @@ import SwiftUI
 
 class HomeLoan {
     let loanAmount: Double
-    let term: Term
+    let duration: Int
+    let repayment: Repayment
+
+    var totalDuration: Int { duration * 12 }
 
     var repayments: [Double] = []
     var table: [TableRow] = [] {
@@ -18,11 +21,10 @@ class HomeLoan {
 
     var totalInterest: Double = 0
 
-    var repaymentType: Repayment = .fixed(0)
-
-    init(loanAmount: Double, term: Term) {
+    init(loanAmount: Double, duration: Int, repayment: Repayment) {
         self.loanAmount = loanAmount
-        self.term = term
+        self.duration = duration
+        self.repayment = repayment
 
         makeRepayments()
     }
@@ -36,30 +38,29 @@ class HomeLoan {
     }
 
     func makeRepayments() {
-        switch term {
-        case .fixed(let term):
-            let rate = term.rate / 12 / 100
-            let duration = self.term.totalDuration
-            let over = loanAmount * rate * duration.doubleValue
-            let under = 1 - Double(truncating: NSDecimalNumber(value: pow(1 + rate, -duration.doubleValue)))
+        switch repayment {
+        case .standard(let val):
+            let rate = val / 12 / 100
+            let over = loanAmount * rate * totalDuration.doubleValue
+            let under = 1 - Double(truncating: NSDecimalNumber(value: pow(1 + rate, -totalDuration.doubleValue)))
             let totalLoan = over / under
-            let repayment = totalLoan / duration.doubleValue
+            let repayment = (totalLoan / totalDuration.doubleValue)
 
-            repaymentType = .fixed(repayment)
-            table = [TableRow(id: 0, interest: 0, repayment: 0, balance: loanAmount)] + createLoanTable(for: loanAmount, rate: rate, term: duration, repayment: repayment)
-            extraTable = [TableRow(id: 0, interest: 0, repayment: 0, balance: loanAmount)] + createLoanTable(for: loanAmount, rate: rate, term: duration, repayment: 3000)
+            let table = createLoanTable(for: loanAmount, rate: rate, term: totalDuration, repayment: repayment)
+            self.table = makeTable(fixed: table)
+            let extraPaymentsTable = createLoanTable(for: loanAmount, rate: rate, term: totalDuration, repayment: 3000)
+            self.extraTable = makeTable(fixed: extraPaymentsTable)
 
-        case .mix(let term):
+        case .fixedPeriod(let term):
             let fixedRate = term.fixedRate / 12 / 100
-            let duration = self.term.totalDuration
-            let fixedOver = loanAmount * fixedRate * duration.doubleValue
-            let fixedUnder = 1 - Double(truncating: NSDecimalNumber(value: pow(1 + fixedRate, -duration.doubleValue)))
+            let fixedOver = loanAmount * fixedRate * totalDuration.doubleValue
+            let fixedUnder = 1 - Double(truncating: NSDecimalNumber(value: pow(1 + fixedRate, -totalDuration.doubleValue)))
             let fixedTotal = fixedOver / fixedUnder
-            let fixedMonthly = (fixedTotal / duration.doubleValue).round(to: 2)
+            let fixedMonthly = (fixedTotal / totalDuration.doubleValue)
 
-            let remainingTerm = duration.doubleValue - Double(term.fixedDuration)
+            let remainingTerm = totalDuration.doubleValue - Double(term.totalDuration)
 
-            let fixedTable = Array(createLoanTable(for: loanAmount, rate: fixedRate, term: duration, repayment: fixedMonthly).prefix(term.fixedDuration))
+            let fixedTable = Array(createLoanTable(for: loanAmount, rate: fixedRate, term: totalDuration, repayment: fixedMonthly).prefix(term.totalDuration))
             let balance = fixedTable.last?.balance ?? 0
 
             let variableRate = term.variableRate / 12 / 100
@@ -68,13 +69,23 @@ class HomeLoan {
             let variableTotal = variableOver / variableUnder
 
             let remaining = variableTotal
-            let variableMonthly = (remaining / remainingTerm).round(to: 2)
+            let variableMonthly = (remaining / remainingTerm)
 
-            let variableTable = createLoanTable(for: balance, rate: variableRate, term: Int(remainingTerm), repayment: variableMonthly, startIndex: term.fixedDuration)
+            let variableTable = createLoanTable(for: balance, rate: variableRate, term: Int(remainingTerm), repayment: variableMonthly, startIndex: term.totalDuration)
 
-            repaymentType = .mix(fixedMonthly, variableMonthly)
-            table = [TableRow(id: 0, interest: 0, repayment: 0, balance: loanAmount)] + fixedTable + variableTable
+            self.table = makeTable(fixed: fixedTable, variable: variableTable)
+
+            let fixedExtraTable = Array(createLoanTable(for: loanAmount, rate: fixedRate, term: totalDuration, repayment: 3000).prefix(term.totalDuration))
+            let variableExtraTable = createLoanTable(for: fixedExtraTable.last?.balance ?? 0, rate: variableRate, term: Int(remainingTerm), repayment: 3000, startIndex: term.totalDuration)
+
+            self.extraTable = makeTable(fixed: fixedExtraTable, variable: variableExtraTable)
         }
+    }
+
+    private func makeTable(fixed: [TableRow], variable: [TableRow] = []) -> [TableRow] {
+        var table = [TableRow(id: 0, interest: 0, repayment: 0, balance: loanAmount)]
+        table.append(contentsOf: fixed + variable)
+        return table
     }
 
     func createLoanTable(for amount: Double, rate: Double, term: Int, repayment: Double, startIndex: Int = 0) -> [TableRow] {
@@ -105,80 +116,57 @@ class HomeLoan {
     }
 }
 
-enum Term: CustomStringConvertible {
-    case fixed(FixedTerm)
-    case mix(MixedTerm)
-
-    var totalDuration: Int {
-        switch self {
-        case .fixed(let val):
-            return val.duration * 12
-        case .mix(let val):
-            return val.totalDuration * 12
-        }
-    }
-
-    func monthlyInterestRate(for month: Int) -> Double {
-        switch self {
-        case .fixed(let term):
-            return term.rate / 12 /  100
-        case .mix(let term):
-            if month <= term.fixedDuration {
-                return term.fixedRate  / 12 /  100
-            }
-
-            return term.variableRate / 12 /  100
-        }
-    }
-
-    var description: String {
-        switch self {
-        case .fixed(let term):
-            return "at \(term.rate) for \(term.duration) years"
-        case .mix(let term):
-            return """
-            at \(term.fixedRate) for \(term.fixedDuration) years
-            then at \(term.variableRate) for \(term.totalDuration - term.fixedDuration) years
-            """
-        }
-    }
-}
-
-struct FixedTerm {
+struct FixedPeriodRepayment {
     let duration: Int
-    let rate: Double
-}
-
-struct MixedTerm {
-    let totalDuration: Int
-    let fixedDuration: Int
     let fixedRate: Double
     let variableRate: Double
+
+    var totalDuration: Int { duration * 12 }
 }
 
-enum Interest {
-    case fixed(Double)
-    case mix((Int, Double), Double)
+enum Repayment: Equatable, CustomStringConvertible {
+    case standard(Double)
+    case fixedPeriod(FixedPeriodRepayment)
 
-    init(fixed value: Double) {
-        self = .fixed(value)
+    var isValid: Bool {
+        switch self {
+        case .standard(let rate):
+            return rate > 0
+        case .fixedPeriod(let repayment):
+            return repayment.duration > 0 &&
+                repayment.fixedRate > 0 &&
+                repayment.variableRate > 0
+        }
     }
 
-    init(fixedTerm: Int, fixedRate: Double, variableRate: Double) {
-        self = .mix((fixedTerm, fixedRate), variableRate)
+    var fixedPeriod: Int? {
+        switch self {
+        case .standard:
+            return nil
+        case .fixedPeriod(let term):
+            return term.totalDuration
+        }
     }
-}
 
-enum Repayment: CustomStringConvertible {
-    case fixed(Double)
-    case mix(Double, Double)
+    static func == (lhs: Repayment, rhs: Repayment) -> Bool {
+        switch (lhs, rhs) {
+        case (.standard(let l), .standard(let r)):
+            return l == r
+
+        case (.fixedPeriod(let l), .fixedPeriod(let r)):
+            return l.duration == r.duration && l.fixedRate == r.fixedRate && l.variableRate == r.variableRate
+
+        default:
+            return false
+        }
+    }
 
     var description: String {
         switch self {
-        case .fixed(let val):
-            return val.currencyString + "/ month"
-        case .mix(let fixed, let after):
-            return fixed.currencyString + " during fixed period\n" + after.currencyString + " after fixed period"
+        case .standard(let rate):
+            return "Standard @ \(rate)%"
+        case .fixedPeriod(let repayment):
+            return "Fixed for \(repayment.duration) years @ \(repayment.fixedRate)% then @ \(repayment.variableRate)%"
         }
     }
 }
