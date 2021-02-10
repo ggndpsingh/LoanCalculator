@@ -11,7 +11,7 @@ struct HomeLoanForm: View {
 
     @State private var loanValue: Double? = 650000
     @State private var duration: Int? = 30
-    @State var repayment: Repayment? = .fixedPeriod(.init(duration: 5, fixedRate: 2.99, variableRate: 3.85))
+    @State var repayment: Repayment?
 
     @State private var repaymentType = 1
     @State var presentingLoan: Bool = false
@@ -27,83 +27,84 @@ struct HomeLoanForm: View {
 
     var body: some View {
         NavigationView {
-            VStack(alignment: .leading) {
-                Text("Loan Details".uppercased())
-                    .font(Font.system(size: 14, weight: .medium, design: .rounded))
-                    .foregroundColor(.secondary)
-                    .padding(.top, 16)
-                    .padding(.bottom, 8)
-
+            ScrollView {
                 VStack(alignment: .leading) {
-                    Text("I would like to borrow")
-                        .font(Font.system(size: 16, weight: .light, design: .rounded))
-                        .foregroundColor(.primary)
+                    Text("Loan Details".uppercased())
+                        .font(Font.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .padding(.top, 16)
+                        .padding(.bottom, 8)
 
-                    TextField("100,000", value: $loanValue, formatter: NumberFormatter.currencyInput)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .font(Font.system(size: 20, weight: .light, design: .rounded))
-                }
-                .padding(.top, 4)
+                    VStack(alignment: .leading) {
+                        Text("I would like to borrow")
+                            .font(Font.system(size: 16, weight: .light))
+                            .foregroundColor(.primary)
 
-                VStack(alignment: .leading) {
-                    Text("Over")
-                        .font(Font.system(size: 16, weight: .light, design: .rounded))
-                        .foregroundColor(.primary)
-
-                    HStack {
-                        TextField("10", value: $duration, formatter: NumberFormatter())
+                        TextField("100,000", value: $loanValue, formatter: NumberFormatter.currencyInput)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
-                            .font(Font.system(size: 20, weight: .light, design: .rounded))
-                            .frame(width: 40, alignment: .center)
-                            .multilineTextAlignment(.center)
-                        Text("years")
-                            .font(Font.system(size: 20, weight: .light, design: .rounded))
-                            .foregroundColor(.secondary)
+                            .font(Font.system(size: 20, weight: .light))
                     }
+                    .padding(.top, 4)
+
+                    VStack(alignment: .leading) {
+                        Text("Over")
+                            .font(Font.system(size: 16, weight: .light))
+                            .foregroundColor(.primary)
+
+                        HStack {
+                            TextField("10", value: $duration, formatter: NumberFormatter())
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                                .font(Font.system(size: 20, weight: .light))
+                                .frame(width: 40, alignment: .center)
+                                .multilineTextAlignment(.center)
+                            Text("years")
+                                .font(Font.system(size: 20, weight: .light))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(.top)
+
+                    Text("Repayment Type".uppercased())
+                        .font(Font.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .padding(.top, 32)
+
+                    Picker(selection: $repaymentType, label: Text("Loan Type")) {
+                        Text("Standard Variable").tag(0)
+                        Text("Fixed Period").tag(1)
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    .padding(.top)
+
+                    if repaymentType == 0 {
+                        StandardInterestView(repayment: $repayment)
+                    } else {
+                        FixedPeriodInterestView(repayment: $repayment)
+                    }
+
+                    Spacer()
+
+                    Button(action: {
+                        presentingLoan = true
+                    }) {
+                        Text("Calculate")
+                    }
+                    .disabled(!canCalculate)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .background(canCalculate ? Color.blue : Color.gray)
+                    .foregroundColor(.white)
+                    .cornerRadius(8)
+                    .padding(.bottom, 32)
                 }
+                .navigationTitle("Home Loan")
+                .padding(.horizontal)
                 .padding(.top)
-
-                Text("Repayment Type".uppercased())
-                    .font(Font.system(size: 14, weight: .medium, design: .rounded))
-                    .foregroundColor(.secondary)
-                    .padding(.top, 32)
-
-                Picker(selection: $repaymentType, label: Text("Loan Type")) {
-                    Text("Standard Variable").tag(0)
-                    Text("Fixed Period").tag(1)
-                }
-                .pickerStyle(SegmentedPickerStyle())
-                .padding(.top)
-
-                if repaymentType == 0 {
-                    StandardInterestView(repayment: $repayment)
-                } else {
-                    FixedPeriodInterestView(repayment: $repayment)
-                }
-
-                Spacer()
-
-                Button(action: {
-                    presentingLoan = true
-                }) {
-                    Text("Calculate")
-                }
-                .disabled(!canCalculate)
-                .frame(maxWidth: .infinity, minHeight: 44)
-                .background(canCalculate ? Color.blue : Color.gray)
-                .foregroundColor(.white)
-                .cornerRadius(8)
-                .padding(.bottom, 32)
             }
-            .navigationTitle("Home Loan")
-            .padding(.horizontal)
-            .padding(.top)
         }
         .fullScreenCover(isPresented: $presentingLoan) {
             let loan = HomeLoan(loanAmount: loanValue!, duration: duration!, repayment: repayment!)
             ContentView(loan: loan)
         }
-        .keyboardType(.decimalPad)
     }
 }
 
@@ -121,22 +122,22 @@ extension Optional {
 
 struct StandardInterestView: View {
     @Binding var repayment: Repayment?
-    @State private var interestRate: Double? = 1.99
+    @State private var interestRate: Double?
 
     var body: some View {
         VStack(alignment: .leading) {
             Text("Interest Rate")
-                .font(Font.system(size: 16, weight: .light, design: .rounded))
+                .font(Font.system(size: 16, weight: .light))
                 .foregroundColor(.primary)
 
             HStack {
                 TextField("2.00", value: $interestRate, formatter: NumberFormatter.decimal)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .font(Font.system(size: 20, weight: .light, design: .rounded))
+                    .font(Font.system(size: 20, weight: .light))
                     .frame(width: 80, alignment: .center)
                     .multilineTextAlignment(.center)
                 Text("%")
-                    .font(Font.system(size: 20, weight: .light, design: .rounded))
+                    .font(Font.system(size: 20, weight: .light))
                     .foregroundColor(.secondary)
             }
         }
@@ -154,13 +155,13 @@ struct StandardInterestView: View {
 
 struct FixedPeriodInterestView: View {
     @Binding var repayment: Repayment?
-    @State private var fixedRate: Double? = 2.99 {
+    @State private var fixedRate: Double? {
         didSet { makeRepayment() }
     }
-    @State private var fixedPeriod: Int? = 5 {
+    @State private var fixedPeriod: Int? {
         didSet { makeRepayment() }
     }
-    @State private var variableRate: Double? = 3.85 {
+    @State private var variableRate: Double? {
         didSet { makeRepayment() }
     }
 
@@ -173,17 +174,17 @@ struct FixedPeriodInterestView: View {
         VStack(alignment: .leading) {
             VStack(alignment: .leading) {
                 Text("Fixed Period")
-                    .font(Font.system(size: 16, weight: .light, design: .rounded))
+                    .font(Font.system(size: 16, weight: .light))
                     .foregroundColor(.primary)
 
                 HStack {
                     TextField("10", value: $fixedPeriod, formatter: NumberFormatter())
                         .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .font(Font.system(size: 20, weight: .light, design: .rounded))
+                        .font(Font.system(size: 20, weight: .light))
                         .frame(width: 40, alignment: .center)
                         .multilineTextAlignment(.center)
                     Text("years")
-                        .font(Font.system(size: 20, weight: .light, design: .rounded))
+                        .font(Font.system(size: 20, weight: .light))
                         .foregroundColor(.secondary)
                 }
             }
@@ -191,17 +192,17 @@ struct FixedPeriodInterestView: View {
 
             VStack(alignment: .leading) {
                 Text("Fixed Interest Rate")
-                    .font(Font.system(size: 16, weight: .light, design: .rounded))
+                    .font(Font.system(size: 16, weight: .light))
                     .foregroundColor(.primary)
 
                 HStack {
                     TextField("2.00", value: $fixedRate, formatter: NumberFormatter.decimal)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .font(Font.system(size: 20, weight: .light, design: .rounded))
+                        .font(Font.system(size: 20, weight: .light))
                         .frame(width: 80, alignment: .center)
                         .multilineTextAlignment(.center)
                     Text("%")
-                        .font(Font.system(size: 20, weight: .light, design: .rounded))
+                        .font(Font.system(size: 20, weight: .light))
                         .foregroundColor(.secondary)
                 }
             }
@@ -209,17 +210,17 @@ struct FixedPeriodInterestView: View {
 
             VStack(alignment: .leading) {
                 Text("Standard Interest Rate")
-                    .font(Font.system(size: 16, weight: .light, design: .rounded))
+                    .font(Font.system(size: 16, weight: .light))
                     .foregroundColor(.primary)
 
                 HStack {
                     TextField("2.00", value: $variableRate, formatter: NumberFormatter.decimal)
                         .textFieldStyle(RoundedBorderTextFieldStyle())
-                        .font(Font.system(size: 20, weight: .light, design: .rounded))
+                        .font(Font.system(size: 20, weight: .light))
                         .frame(width: 80, alignment: .center)
                         .multilineTextAlignment(.center)
                     Text("%")
-                        .font(Font.system(size: 20, weight: .light, design: .rounded))
+                        .font(Font.system(size: 20, weight: .light))
                         .foregroundColor(.secondary)
                 }
             }

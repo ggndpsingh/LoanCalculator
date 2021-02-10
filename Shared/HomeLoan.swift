@@ -2,117 +2,151 @@
 
 import SwiftUI
 
-class HomeLoan {
+class HomeLoan: ObservableObject {
     let loanAmount: Double
     let duration: Int
     let repayment: Repayment
 
-    var totalDuration: Int { duration * 12 }
+    var totalInterest: Double = 0
+    var totalRepayments: Double = 0
 
-    var repayments: [Double] = []
-    var table: [TableRow] = [] {
+    private(set) var normalRepaymentsTable: [TableGroup] = []
+    private(set) var extraRepaymentsTable: [TableGroup] = []
+
+    var extraRepayment: Double? {
         didSet {
-            totalInterest = table.map { $0.interest }.reduce(0, +)
-            repayments = table.map { $0.repayment }
+            updateExtraAmortizationTable()
+            objectWillChange.send()
         }
     }
 
-    var extraTable: [TableRow] = []
+    private var durationInMonths: Int { duration * 12 }
 
-    var totalInterest: Double = 0
+    var table: [TableGroup] {
+        extraRepaymentsTable.isEmpty ? normalRepaymentsTable : extraRepaymentsTable
+    }
 
+    var repayments: (Double, Double?) = (0, nil)
+    
     init(loanAmount: Double, duration: Int, repayment: Repayment) {
         self.loanAmount = loanAmount
         self.duration = duration
         self.repayment = repayment
 
-        makeRepayments()
+        updateNormalAmortizationTable()
     }
 
-    var totalLoan: Double {
-        var amount: Double = 0
-        for row in repayments {
-            amount += row
+    private func updateNormalAmortizationTable() {
+        let table = Self.makeAmortizationTable(loanAmount: loanAmount, duration: durationInMonths, repayment: repayment)
+        totalInterest = table.reduce(0) { $0 + $1.interest }
+        totalRepayments = table.reduce(0) { $0 + $1.repayment }
+        self.normalRepaymentsTable = table
+    }
+
+    private func updateExtraAmortizationTable() {
+        let table = Self.makeAmortizationTable(loanAmount: loanAmount, duration: durationInMonths, repayment: repayment, extraRepayment: extraRepayment)
+        totalInterest = table.reduce(0) { $0 + $1.interest }
+        totalRepayments = table.reduce(0) { $0 + $1.repayment }
+        self.extraRepaymentsTable = table
+    }
+
+    static func makeAmortizationTable(loanAmount: Double, duration: Int, repayment: Repayment, extraRepayment: Double? = nil) -> [TableGroup] {
+        func makeFixedTable(at interestRate: Double) -> [TableRow] {
+            let totalLoan = calculateTotalLoanRepayment(loanAmount: loanAmount, duration: duration, interestRate: interestRate)
+            let repayment = (totalLoan / duration.doubleValue + (extraRepayment ?? 0)).round(to: 2)
+            return createLoanTable(for: loanAmount, interestRate: interestRate, term: duration, repayment: repayment)
         }
-        return amount
-    }
 
-    func makeRepayments() {
         switch repayment {
-        case .standard(let val):
-            let rate = val / 12 / 100
-            let over = loanAmount * rate * totalDuration.doubleValue
-            let under = 1 - Double(truncating: NSDecimalNumber(value: pow(1 + rate, -totalDuration.doubleValue)))
-            let totalLoan = over / under
-            let repayment = (totalLoan / totalDuration.doubleValue)
+        case .standard(let interestRate):
+            return makeTable(fixed: makeFixedTable(at: interestRate))
 
-            let table = createLoanTable(for: loanAmount, rate: rate, term: totalDuration, repayment: repayment)
-            self.table = makeTable(fixed: table)
-            let extraPaymentsTable = createLoanTable(for: loanAmount, rate: rate, term: totalDuration, repayment: 3000)
-            self.extraTable = makeTable(fixed: extraPaymentsTable)
+        case .fixedPeriod(let repayment):
+            let fixedTable = Array(makeFixedTable(at: repayment.fixedRate).prefix(repayment.durationMonths))
+            let balance = fixedTable.last!.closing
 
-        case .fixedPeriod(let term):
-            let fixedRate = term.fixedRate / 12 / 100
-            let fixedOver = loanAmount * fixedRate * totalDuration.doubleValue
-            let fixedUnder = 1 - Double(truncating: NSDecimalNumber(value: pow(1 + fixedRate, -totalDuration.doubleValue)))
-            let fixedTotal = fixedOver / fixedUnder
-            let fixedMonthly = (fixedTotal / totalDuration.doubleValue)
+            let remainingTerm = duration - repayment.durationMonths
+            let variableTotal = calculateTotalLoanRepayment(loanAmount: balance, duration: remainingTerm, interestRate: repayment.variableRate)
+            let variableMonthly = (variableTotal / remainingTerm.doubleValue + (extraRepayment ?? 0)).round(to: 2)
 
-            let remainingTerm = totalDuration.doubleValue - Double(term.totalDuration)
+            let variableTable = createLoanTable(for: balance, interestRate: repayment.variableRate, term: Int(remainingTerm), repayment: variableMonthly, startIndex: repayment.durationMonths)
 
-            let fixedTable = Array(createLoanTable(for: loanAmount, rate: fixedRate, term: totalDuration, repayment: fixedMonthly).prefix(term.totalDuration))
-            let balance = fixedTable.last?.balance ?? 0
-
-            let variableRate = term.variableRate / 12 / 100
-            let variableOver = balance * variableRate * remainingTerm
-            let variableUnder = 1 - Double(truncating: NSDecimalNumber(value: pow(1 + variableRate, -remainingTerm)))
-            let variableTotal = variableOver / variableUnder
-
-            let remaining = variableTotal
-            let variableMonthly = (remaining / remainingTerm)
-
-            let variableTable = createLoanTable(for: balance, rate: variableRate, term: Int(remainingTerm), repayment: variableMonthly, startIndex: term.totalDuration)
-
-            self.table = makeTable(fixed: fixedTable, variable: variableTable)
-
-            let fixedExtraTable = Array(createLoanTable(for: loanAmount, rate: fixedRate, term: totalDuration, repayment: 3000).prefix(term.totalDuration))
-            let variableExtraTable = createLoanTable(for: fixedExtraTable.last?.balance ?? 0, rate: variableRate, term: Int(remainingTerm), repayment: 3000, startIndex: term.totalDuration)
-
-            self.extraTable = makeTable(fixed: fixedExtraTable, variable: variableExtraTable)
+            return makeTable(fixed: fixedTable, variable: variableTable)
         }
     }
 
-    private func makeTable(fixed: [TableRow], variable: [TableRow] = []) -> [TableRow] {
-        var table = [TableRow(id: 0, interest: 0, repayment: 0, balance: loanAmount)]
-        table.append(contentsOf: fixed + variable)
-        return table
+    static func calculateTotalLoanRepayment(loanAmount: Double, duration: Int, interestRate: Double) -> Double {
+        let rate = interestRate / 12 / 100
+        let over = loanAmount * rate * duration.doubleValue
+        let under = 1 - Double(truncating: NSDecimalNumber(value: pow(1 + rate, -duration.doubleValue)))
+        return over / under
     }
 
-    func createLoanTable(for amount: Double, rate: Double, term: Int, repayment: Double, startIndex: Int = 0) -> [TableRow] {
+    private static func makeTable(fixed: [TableRow], variable: [TableRow] = []) -> [TableGroup] {
+        var groups: [TableGroup] = []
+
+        let fixedGroups = Int((Double(fixed.count) / 12.0).rounded(.up))
+        for i in 0..<fixedGroups {
+            var rows: [TableRow] = []
+
+            let start: Int = (i * 12)
+            var end: Int = start + 11
+            if end > fixed.count {
+                end = fixed.count - 1
+            }
+            rows.append(contentsOf: fixed[start...end])
+
+            let interest = rows.reduce(0) { $0 + $1.interest }
+            let repayment = rows.reduce(0) { $0 + $1.repayment }
+
+            let openingBalance = rows[0].opening
+            let closingBalance = rows.last?.closing ?? 0
+            let group = TableGroup(id: i, opening: openingBalance, closing: closingBalance, interest: interest, repayment: repayment, rows: rows)
+
+            groups.append(group)
+        }
+
+        let variableGroups = Int(variable.count / 12)
+        for i in 0..<variableGroups {
+            var rows: [TableRow] = []
+
+            let start: Int = (i * 12)
+            let end: Int = start + 11
+            rows.append(contentsOf: variable[start...end])
+
+            let interest = rows.reduce(0) { $0 + $1.interest }
+            let repayment = rows.reduce(0) { $0 + $1.repayment }
+
+            let openingBalance = rows.first!.opening
+            let closingBalance = rows.last!.closing
+            let group = TableGroup(id: i, opening: openingBalance, closing: closingBalance, interest: interest, repayment: repayment, rows: rows)
+
+            groups.append(group)
+        }
+
+        return groups
+    }
+
+    static func createLoanTable(for amount: Double, interestRate: Double, term: Int, repayment: Double, startIndex: Int = 0) -> [TableRow] {
+        let rate = interestRate / 12 / 100
         var balance = amount
         var payment = repayment
 
         var index = startIndex + 1
         var table: [TableRow] = []
-        while balance > 5 {
+
+        while balance > 0 {
+            let openingBalance = balance
             let interest = balance * rate
             let newBalance = balance + interest
             payment = min(newBalance, repayment)
             balance = newBalance - payment
-            balance = balance >= 5 ? balance.round(to: 2) : 0
 
-            table.append(.init(id: index, interest: interest, repayment: payment, balance: balance))
+            table.append(.init(id: index, opening: openingBalance, interest: interest, repayment: payment, closing: balance))
             index += 1
         }
 
         return table
-    }
-
-    struct TableRow: Identifiable {
-        let id: Int
-        let interest: Double
-        let repayment: Double
-        let balance: Double
     }
 }
 
@@ -121,7 +155,7 @@ struct FixedPeriodRepayment {
     let fixedRate: Double
     let variableRate: Double
 
-    var totalDuration: Int { duration * 12 }
+    var durationMonths: Int { duration * 12 }
 }
 
 enum Repayment: Equatable, CustomStringConvertible {
@@ -144,7 +178,25 @@ enum Repayment: Equatable, CustomStringConvertible {
         case .standard:
             return nil
         case .fixedPeriod(let term):
-            return term.totalDuration
+            return term.duration
+        }
+    }
+
+    var fixedInterestRate: Double? {
+        switch self {
+        case .standard:
+            return nil
+        case .fixedPeriod(let term):
+            return term.fixedRate
+        }
+    }
+
+    var standardInterestRate: Double {
+        switch self {
+        case .standard(let rate):
+            return rate
+        case .fixedPeriod(let term):
+            return term.variableRate
         }
     }
 
@@ -164,25 +216,9 @@ enum Repayment: Equatable, CustomStringConvertible {
     var description: String {
         switch self {
         case .standard(let rate):
-            return "Standard @ \(rate)%"
+            return "\(rate)% per annum"
         case .fixedPeriod(let repayment):
-            return "Fixed for \(repayment.duration) years @ \(repayment.fixedRate)% then @ \(repayment.variableRate)%"
+            return "\(repayment.fixedRate)% for \(repayment.duration) years then \(repayment.variableRate)% per annum"
         }
     }
-}
-
-extension Double {
-    func round(to places: Int) -> Double {
-        let divisor = pow(10.0, Double(places))
-        return (self * divisor).rounded() / divisor
-    }
-
-    func roundUp(to places: Int) -> Double {
-        let divisor = pow(10.0, Double(places))
-        return (self * divisor).rounded(.up) / divisor
-    }
-}
-
-extension Int {
-    var doubleValue: Double { Double(self) }
 }
