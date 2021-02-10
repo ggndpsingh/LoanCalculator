@@ -17,7 +17,7 @@ struct ContentView: View {
             ScrollView {
                 VStack {
 
-                    VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 24) {
                         VStack(alignment: .leading, spacing: 4) {
                             Group {
                                 Text("Borrowing")
@@ -43,16 +43,44 @@ struct ContentView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Total loan repayments")
                                     .font(.system(size: 13, weight: .regular))
+                                    .foregroundColor(.secondary)
                                 Text(" \(loan.totalRepayments.currencyString)")
                                     .font(.system(size: 14, weight: .bold))
                             }
+                            .frame(minWidth: 150, alignment: .leading)
 
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Total interest charged")
                                     .font(.system(size: 13, weight: .regular))
+                                    .foregroundColor(.secondary)
                                 Text(" \(loan.totalInterest.currencyString)")
                                     .font(.system(size: 14, weight: .bold))
                             }
+                            .frame(minWidth: 150, alignment: .leading)
+
+                            Spacer()
+                        }
+
+                        HStack(spacing: 24) {
+                            if let fixedPayment = loan.fixedPeriodRepayment {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Fixed Period Repayment")
+                                        .font(.system(size: 13, weight: .regular))
+                                        .foregroundColor(.secondary)
+                                    Text(" \(fixedPayment.currencyString)")
+                                        .font(.system(size: 14, weight: .bold))
+                                }
+                                .frame(minWidth: 150, alignment: .leading)
+                            }
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Standard Repayment")
+                                    .font(.system(size: 13, weight: .regular))
+                                    .foregroundColor(.secondary)
+                                Text(" \(loan.standardRepayment.currencyString)")
+                                    .font(.system(size: 14, weight: .bold))
+                            }
+                            .frame(minWidth: 150, alignment: .leading)
 
                             Spacer()
                         }

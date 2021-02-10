@@ -26,8 +26,8 @@ struct AmortizationView: View {
         expandedGroups.insert(index)
     }
 
-    func standardInterestHeader() -> some View {
-        Text("Interest rate \(repayment.standardInterestRate.percentageString) with monthly repayments of \(groups.first!.rows.first!.repayment.currencyString)")
+    func standardInterestHeader(payment: Double) -> some View {
+        Text("Interest rate \(repayment.standardInterestRate.percentageString) with monthly repayments of \(payment.currencyString)")
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(4)
             .background(Color.black)
@@ -35,10 +35,10 @@ struct AmortizationView: View {
             .font(.system(size: 14, weight: .regular))
     }
 
-    func fixedInterestHeader(interestRate: Double, repayment: Double) -> some View {
-        Text("Interest rate \(interestRate.percentageString) with monthly repayments of \(repayment.currencyString)")
+    func fixedInterestHeader(interestRate: Double, payment: Double) -> some View {
+        Text("Interest rate \(interestRate.percentageString) with monthly repayments of \(payment.currencyString)")
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding()
+            .padding(4)
             .background(Color.black)
             .foregroundColor(.white)
             .font(.system(size: 14, weight: .regular))
@@ -50,7 +50,7 @@ struct AmortizationView: View {
                 tableHeader()
 
                 if let rate = repayment.fixedInterestRate {
-                    fixedInterestHeader(interestRate: rate, repayment: groups.first!.rows.first!.repayment)
+                    fixedInterestHeader(interestRate: rate, payment: groups.first!.rows.first!.repayment)
                 }
 
                 ForEach(groups) { group in
@@ -62,7 +62,7 @@ struct AmortizationView: View {
                     }
 
                     if let period = repayment.fixedPeriod, index == period - 1 {
-                        standardInterestHeader()
+                        standardInterestHeader(payment: groups[period].rows.first!.repayment)
                     }
                 }
             }

@@ -13,7 +13,7 @@ struct HomeLoanForm: View {
     @State private var duration: Int? = 30
     @State var repayment: Repayment?
 
-    @State private var repaymentType = 1
+    @State private var repaymentType = 0
     @State var presentingLoan: Bool = false
 
     private var canCalculate: Bool {
