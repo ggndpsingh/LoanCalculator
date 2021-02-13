@@ -9,7 +9,7 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(\.presentationMode) private var presentationMode
-
+    
     @ObservedObject var loan: HomeLoan
 
     var body: some View {
@@ -33,11 +33,18 @@ struct ContentView: View {
                             Group {
                                 Text("at")
                                     .font(.system(size: 13, weight: .regular))
-                                + Text(" \(loan.repayment.description)")
+                                + Text(" \(loan.interestType.description)")
                                     .font(.system(size: 14, weight: .bold))
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                         }
+
+                        Picker(selection: $loan.repaymentFrequency, label: Text("Loan Type")) {
+                            ForEach(RepaymentFrequency.allCases) { frequency in
+                                Text(String(frequency.label)).tag(frequency)
+                            }
+                        }
+                        .pickerStyle(SegmentedPickerStyle())
 
                         HStack(spacing: 24) {
                             VStack(alignment: .leading, spacing: 4) {
@@ -101,7 +108,7 @@ struct ContentView: View {
                         .frame(height: 200)
                         .padding()
 
-                    AmortizationView(groups: loan.table, repayment: loan.repayment)
+                    AmortizationView(groups: loan.table, repayment: loan.interestType)
                 }
             }
             .navigationTitle("Loan Details")
@@ -116,7 +123,7 @@ struct ContentView: View {
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
-//        ContentView(loan: .init(loanAmount: 650000, duration: 30, repayment: .fixedPeriod(.init(duration: 4, fixedRate: 1.99, variableRate: 3.85))))
-        ContentView(loan: .init(loanAmount: 650000, duration: 30, repayment: .standard(1.99)))
+        ContentView(loan: .init(loanAmount: 650000, duration: 30, repayment: .fixedPeriod(.init(duration: 4, fixedRate: 1.99, variableRate: 3.85))))
+//        ContentView(loan: .init(loanAmount: 650000, duration: 30, repayment: .standard(1.99)))
     }
 }

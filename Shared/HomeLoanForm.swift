@@ -11,7 +11,7 @@ struct HomeLoanForm: View {
 
     @State private var loanValue: Double? = 650000
     @State private var duration: Int? = 30
-    @State var repayment: Repayment?
+    @State var repayment: InterestType?
 
     @State private var repaymentType = 0
     @State var presentingLoan: Bool = false
@@ -121,7 +121,7 @@ extension Optional {
 }
 
 struct StandardInterestView: View {
-    @Binding var repayment: Repayment?
+    @Binding var repayment: InterestType?
     @State private var interestRate: Double?
 
     var body: some View {
@@ -154,7 +154,7 @@ struct StandardInterestView: View {
 }
 
 struct FixedPeriodInterestView: View {
-    @Binding var repayment: Repayment?
+    @Binding var repayment: InterestType?
     @State private var fixedRate: Double? {
         didSet { makeRepayment() }
     }

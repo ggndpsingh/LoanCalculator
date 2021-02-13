@@ -5,7 +5,9 @@ import SwiftUI
 class HomeLoan: ObservableObject {
     let loanAmount: Double
     let duration: Int
-    let repayment: Repayment
+    let interestType: InterestType
+
+    var multiplier: Int { repaymentFrequency.rawValue }
 
     var totalInterest: Double = 0
     var totalRepayments: Double = 0
@@ -14,21 +16,28 @@ class HomeLoan: ObservableObject {
     private(set) var extraRepaymentsTable: [TableGroup] = []
 
     var standardRepayment: Double {
-        switch repayment {
-        case .standard(let interestRate):
-            return Calculator.calculateMonthlyPayment(on: loanAmount, over: duration, at: interestRate)
-        case .fixedPeriod(let repayment):
-            let balance = Calculator.calculateRemainingBalanceAfter(period: repayment.duration, on: loanAmount, over: 30, at: repayment.fixedRate)
-            return Calculator.calculateMonthlyPayment(on: balance, over: duration - repayment.duration, at: repayment.variableRate)
+        switch interestType {
+        case .standard(let rate):
+            return Calculator.calculatePayment(on: loanAmount, over: duration, at: rate, frequency: repaymentFrequency)
+        case .fixedPeriod(let fixedInterest):
+            let balance = Calculator.calculateRemainingBalanceAfter(period: fixedInterest.duration, on: loanAmount, over: 30, at: fixedInterest.fixedRate, frequency: repaymentFrequency)
+            return Calculator.calculatePayment(on: balance, over: duration - fixedInterest.duration, at: fixedInterest.variableRate, frequency: repaymentFrequency)
         }
     }
 
     var fixedPeriodRepayment: Double? {
-        switch repayment {
+        switch interestType {
         case .standard:
             return nil
-        case .fixedPeriod(let repayment):
-            return Calculator.calculateMonthlyPayment(on: loanAmount, over: duration, at: repayment.fixedRate)
+        case .fixedPeriod(let fixedInterest):
+            return Calculator.calculatePayment(on: loanAmount, over: duration, at: fixedInterest.fixedRate, frequency: repaymentFrequency)
+        }
+    }
+
+    var repaymentFrequency: RepaymentFrequency = .monthly {
+        didSet {
+            updateExtraAmortizationTable()
+            objectWillChange.send()
         }
     }
 
@@ -39,70 +48,71 @@ class HomeLoan: ObservableObject {
         }
     }
 
-    private var durationInMonths: Int { duration * 12 }
-
     var table: [TableGroup] {
         extraRepaymentsTable.isEmpty ? normalRepaymentsTable : extraRepaymentsTable
     }
     
-    init(loanAmount: Double, duration: Int, repayment: Repayment) {
+    init(loanAmount: Double, duration: Int, repayment: InterestType) {
         self.loanAmount = loanAmount
         self.duration = duration
-        self.repayment = repayment
+        self.interestType = repayment
         updateNormalAmortizationTable()
     }
 
     private func updateNormalAmortizationTable() {
-        let table = Self.makeAmortizationTable(loanAmount: loanAmount, duration: duration, repayment: repayment)
+        let table = Self.makeAmortizationTable(loanAmount: loanAmount, duration: duration, repayment: interestType, frequency: repaymentFrequency)
         totalInterest = table.reduce(0) { $0 + $1.interest }
         totalRepayments = table.reduce(0) { $0 + $1.repayment }
-        self.normalRepaymentsTable = table
+        normalRepaymentsTable = table
     }
 
     private func updateExtraAmortizationTable() {
-        let table = Self.makeAmortizationTable(loanAmount: loanAmount, duration: duration, repayment: repayment, extraRepayment: extraRepayment)
+        let table = Self.makeAmortizationTable(loanAmount: loanAmount, duration: duration, repayment: interestType, frequency: repaymentFrequency, extraRepayment: extraRepayment)
         totalInterest = table.reduce(0) { $0 + $1.interest }
         totalRepayments = table.reduce(0) { $0 + $1.repayment }
-        self.extraRepaymentsTable = table
+        extraRepaymentsTable = table
     }
+}
 
-    static func makeAmortizationTable(loanAmount: Double, duration: Int, repayment: Repayment, extraRepayment: Double? = nil) -> [TableGroup] {
+extension HomeLoan {
+    static func makeAmortizationTable(loanAmount: Double, duration: Int, repayment: InterestType, frequency: RepaymentFrequency, extraRepayment: Double? = nil) -> [TableGroup] {
         switch repayment {
         case .standard(let interestRate):
-            var payment = Calculator.calculateMonthlyPayment(on: loanAmount, over: duration, at: interestRate)
+            var payment = Calculator.calculatePayment(on: loanAmount, over: duration, at: interestRate, frequency: frequency)
             payment += extraRepayment ?? 0
-            let table = createLoanTable(for: loanAmount, over: duration, at: interestRate, with: payment)
-            return makeTable(fixed: table)
+            let table = createLoanTable(for: loanAmount, over: duration, at: interestRate, with: payment, frequency: frequency)
+            return makeTable(fixed: table, frequency: frequency)
 
-        case .fixedPeriod(let repayment):
-            let balance = Calculator.calculateRemainingBalanceAfter(period: repayment.duration, on: loanAmount, over: duration, at: repayment.fixedRate)
-            let remainingTerm = duration - repayment.duration
+        case .fixedPeriod(let fixedInterest):
+            let remainingTerm = duration - fixedInterest.duration
 
 
-            var fixedPayment = Calculator.calculateMonthlyPayment(on: loanAmount, over: duration, at: repayment.fixedRate)
+            var fixedPayment = Calculator.calculatePayment(on: loanAmount, over: duration, at: fixedInterest.fixedRate, frequency: frequency)
             fixedPayment += extraRepayment ?? 0
 
-            var standardPayment = Calculator.calculateMonthlyPayment(on: balance, over: remainingTerm, at: repayment.variableRate)
+            let fixedTable = Array(createLoanTable(for: loanAmount, over: duration, at: fixedInterest.fixedRate, with: fixedPayment, frequency: frequency).prefix(fixedInterest.duration(for: frequency)))
+            let balance = fixedTable.last!.closing
+
+            var standardPayment = Calculator.calculatePayment(on: balance, over: remainingTerm, at: fixedInterest.variableRate, frequency: frequency)
             standardPayment += extraRepayment ?? 0
 
+            let variableTable = createLoanTable(for: balance, over: remainingTerm, at: fixedInterest.variableRate, with: standardPayment, frequency: frequency, startIndex: fixedInterest.duration(for: frequency))
 
-            let fixedTable = Array(createLoanTable(for: loanAmount, over: duration, at: repayment.fixedRate, with: fixedPayment).prefix(repayment.durationMonths))
-            let variableTable = createLoanTable(for: balance, over: remainingTerm, at: repayment.variableRate, with: standardPayment, startIndex: repayment.durationMonths)
-
-            return makeTable(fixed: fixedTable, variable: variableTable)
+            return makeTable(fixed: fixedTable, variable: variableTable, frequency: frequency)
         }
     }
 
-    private static func makeTable(fixed: [TableRow], variable: [TableRow] = []) -> [TableGroup] {
+    private static func makeTable(fixed: [TableRow], variable: [TableRow] = [], frequency: RepaymentFrequency) -> [TableGroup] {
         var groups: [TableGroup] = []
 
-        let fixedGroups = Int((Double(fixed.count) / 12.0).rounded(.up))
+        let multiplier = frequency.rawValue
+        let fixedGroups = Int((Double(fixed.count) / multiplier.doubleValue).rounded(.up))
         for i in 0..<fixedGroups {
             var rows: [TableRow] = []
 
-            let start: Int = (i * 12)
-            var end: Int = start + 11
-            if end > fixed.count {
+            let start: Int = (i * multiplier)
+            var end: Int = start + multiplier - 1
+            if end >= fixed.count {
                 end = fixed.count - 1
             }
             rows.append(contentsOf: fixed[start...end])
@@ -117,12 +127,12 @@ class HomeLoan: ObservableObject {
             groups.append(group)
         }
 
-        let variableGroups = Int(variable.count / 12)
+        let variableGroups = Int(variable.count / multiplier)
         for i in 0..<variableGroups {
             var rows: [TableRow] = []
 
-            let start: Int = (i * 12)
-            var end: Int = start + 11
+            let start: Int = (i * multiplier)
+            var end: Int = start + multiplier - 1
             if end > variable.count {
                 end = variable.count - 1
             }
@@ -141,8 +151,8 @@ class HomeLoan: ObservableObject {
         return groups
     }
 
-    static func createLoanTable(for amount: Double, over duration: Int, at interestRate: Double, with repayment: Double, startIndex: Int = 0) -> [TableRow] {
-        let rate = interestRate / 12 / 100
+    static func createLoanTable(for amount: Double, over duration: Int, at interestRate: Double, with repayment: Double, frequency: RepaymentFrequency, startIndex: Int = 0) -> [TableRow] {
+        let rate = interestRate / frequency.rawValue.doubleValue / 100
 
         var balance = amount
         var payment = repayment
@@ -164,17 +174,19 @@ class HomeLoan: ObservableObject {
     }
 }
 
-struct FixedPeriodRepayment {
+struct FixedPeriodInterest {
     let duration: Int
     let fixedRate: Double
     let variableRate: Double
 
-    var durationMonths: Int { duration * 12 }
+    func duration(for frequency: RepaymentFrequency) -> Int {
+        duration * frequency.rawValue
+    }
 }
 
-enum Repayment: Equatable, CustomStringConvertible {
+enum InterestType: Equatable, CustomStringConvertible {
     case standard(Double)
-    case fixedPeriod(FixedPeriodRepayment)
+    case fixedPeriod(FixedPeriodInterest)
 
     var isValid: Bool {
         switch self {
@@ -214,7 +226,7 @@ enum Repayment: Equatable, CustomStringConvertible {
         }
     }
 
-    static func == (lhs: Repayment, rhs: Repayment) -> Bool {
+    static func == (lhs: InterestType, rhs: InterestType) -> Bool {
         switch (lhs, rhs) {
         case (.standard(let l), .standard(let r)):
             return l == r
@@ -233,6 +245,21 @@ enum Repayment: Equatable, CustomStringConvertible {
             return "\(rate)% per annum"
         case .fixedPeriod(let repayment):
             return "\(repayment.fixedRate)% for \(repayment.duration) years then \(repayment.variableRate)% per annum"
+        }
+    }
+}
+
+enum RepaymentFrequency: Int, Identifiable, CaseIterable {
+    var id: Int { rawValue }
+    case monthly = 12
+    case fortnightly = 26
+    case weekly = 52
+
+    var label: String {
+        switch self {
+        case .monthly: return "Monthly"
+        case .fortnightly: return "Fortnightly"
+        case .weekly: return "Weekly"
         }
     }
 }

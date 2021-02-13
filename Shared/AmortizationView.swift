@@ -9,7 +9,7 @@ import SwiftUI
 
 struct AmortizationView: View {
     let groups: [TableGroup]
-    let repayment: Repayment
+    let repayment: InterestType
 
     @State private var expandedGroups: Set<Int> = []
 
@@ -61,9 +61,9 @@ struct AmortizationView: View {
                         rowsView(with: group.rows)
                     }
 
-                    if let period = repayment.fixedPeriod, index == period - 1 {
-                        standardInterestHeader(payment: groups[period].rows.first!.repayment)
-                    }
+//                    if let period = repayment.fixedPeriod, index == period - 1 {
+//                        standardInterestHeader(payment: groups[period].rows.first!.repayment)
+//                    }
                 }
             }
         }
@@ -174,7 +174,7 @@ struct AmortizationView_Previews: PreviewProvider {
 //            let loan = HomeLoan(loanAmount: 650000, duration: 30, repayment: .standard(1.99))
         
         ScrollView {
-            return AmortizationView(groups: loan.table, repayment: loan.repayment)
+            return AmortizationView(groups: loan.table, repayment: loan.interestType)
         }
     }
 }
