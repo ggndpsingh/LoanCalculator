@@ -9,8 +9,8 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(\.presentationMode) private var presentationMode
-    
     @ObservedObject var loan: HomeLoan
+    @State private var showExtraRepaymentInput: Bool = false
 
     var body: some View {
         NavigationView {
@@ -39,12 +39,25 @@ struct ContentView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                         }
 
-                        Picker(selection: $loan.repaymentFrequency, label: Text("Loan Type")) {
-                            ForEach(RepaymentFrequency.allCases) { frequency in
-                                Text(String(frequency.label)).tag(frequency)
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Repayment Frequency")
+                                .font(.system(size: 14, weight: .medium))
+
+                            Picker(selection: $loan.repaymentFrequency, label: Text("Loan Type")) {
+                                ForEach(RepaymentFrequency.allCases) { frequency in
+                                    Text(String(frequency.label)).tag(frequency)
+                                }
                             }
+                            .pickerStyle(SegmentedPickerStyle())
                         }
-                        .pickerStyle(SegmentedPickerStyle())
+
+                        VStack(alignment: .leading) {
+                            Text("Extra Repayment")
+                                .font(.system(size: 14, weight: .medium))
+                            TextField("0.0", value: $loan.extraRepayment, formatter: NumberFormatter.currencyInput)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
                         HStack(spacing: 24) {
                             VStack(alignment: .leading, spacing: 4) {
@@ -91,13 +104,6 @@ struct ContentView: View {
 
                             Spacer()
                         }
-                    }
-                    .padding()
-
-                    VStack(alignment: .leading) {
-                        Text("Extra Repayment")
-                        TextField("0.0", value: $loan.extraRepayment, formatter: NumberFormatter.currencyInput)
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
                     }
                     .padding()
 

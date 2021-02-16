@@ -127,13 +127,13 @@ extension HomeLoan {
             groups.append(group)
         }
 
-        let variableGroups = Int(variable.count / multiplier)
+        let variableGroups = Int((variable.count.doubleValue / multiplier.doubleValue).rounded(.up))
         for i in 0..<variableGroups {
             var rows: [TableRow] = []
 
             let start: Int = (i * multiplier)
             var end: Int = start + multiplier - 1
-            if end > variable.count {
+            if end >= variable.count {
                 end = variable.count - 1
             }
             rows.append(contentsOf: variable[start...end])

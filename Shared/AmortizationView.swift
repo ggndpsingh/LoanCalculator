@@ -61,9 +61,9 @@ struct AmortizationView: View {
                         rowsView(with: group.rows)
                     }
 
-//                    if let period = repayment.fixedPeriod, index == period - 1 {
-//                        standardInterestHeader(payment: groups[period].rows.first!.repayment)
-//                    }
+                    if let period = repayment.fixedPeriod, index == period - 1 {
+                        standardInterestHeader(payment: groups[period].rows.first!.repayment)
+                    }
                 }
             }
         }
