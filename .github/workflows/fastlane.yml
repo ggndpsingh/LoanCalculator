@@ -10,7 +10,7 @@ jobs:
     name: Execute fastlane
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@main
       - name: Install Ruby Dependencies
         run: bundle install
 
@@ -19,5 +19,5 @@ jobs:
         env:
           FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD  }}
         run: |
-          bundle exec fastlane test
+          bundle exec fastlane ios build
 
