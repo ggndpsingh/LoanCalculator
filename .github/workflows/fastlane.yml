@@ -1,23 +1,38 @@
 name: Execute fastlane
 
 on:
-  push:
+  pull_request:
     branches:
-      - main
+      - master
 
 jobs:
   build_dev:
     name: Execute fastlane
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@main
+      - uses: actions/checkout@master
       - name: Install Ruby Dependencies
         run: bundle install
+
+      - name: Match Repo Clone Test (please delete this)
+        env:
+          GIT_SSH_COMMAND: "ssh -o StrictHostKeyChecking=no"
+          MATCH_DEPLOY_KEY: ${{ secrets.MATCH_DEPLOY_KEY }}
+        run: |
+          eval "$(ssh-agent -s)"
+          ssh-add - <<< "${MATCH_DEPLOY_KEY}"
+          git clone git@github.com:ggndpsingh/fastlane-match-repo.git
+          ls fastlane-match-repo
 
 
       - name: fastlane
         env:
           FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD  }}
+          MATCH_DEPLOY_KEY: ${{ secrets.MATCH_DEPLOY_KEY  }}
+          GIT_SSH_COMMAND: "ssh -o StrictHostKeyChecking=no"
+          MATCH_READONLY: true
         run: |
-          bundle exec fastlane ios build
+          eval "$(ssh-agent -s)"
+          ssh-add - <<< "${MATCH_DEPLOY_KEY}"
+          bundle exec fastlane test
 

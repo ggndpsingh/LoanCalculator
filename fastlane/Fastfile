@@ -61,6 +61,8 @@ lane :init_ci do
     api_token: "36af7d9743b7a5a367b0211b3d8f4afa9bae1e42",
     org: "ggndpsingh",
     repo: "LoanCalculator",
+    match_org: "ggndpsingh",
+    match_repo: "fastlane-match-repo",
     dotenv_paths: ["fastlane/.env.secret"] # optional
   )
 end
