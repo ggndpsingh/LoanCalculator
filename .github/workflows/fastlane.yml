@@ -1,0 +1,23 @@
+name: Execute fastlane
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build_dev:
+    name: Execute fastlane
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: Install Ruby Dependencies
+        run: bundle install
+
+
+      - name: fastlane
+        env:
+          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD  }}
+        run: |
+          bundle exec fastlane test
+

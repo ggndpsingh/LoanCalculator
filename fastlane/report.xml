@@ -4,5 +4,10 @@
     
     
     
+      
+      <testcase classname="fastlane.lanes" name="0: github_action" time="12.241588">
+        
+      </testcase>
+    
   </testsuite>
 </testsuites>

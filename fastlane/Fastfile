@@ -55,3 +55,12 @@ platform :mac do
 
   end
 end
+
+lane :init_ci do
+  github_action(
+    api_token: "36af7d9743b7a5a367b0211b3d8f4afa9bae1e42",
+    org: "ggndpsingh",
+    repo: "LoanCalculator",
+    dotenv_paths: ["fastlane/.env.secret"] # optional
+  )
+end

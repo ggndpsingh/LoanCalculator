@@ -20,6 +20,11 @@ or alternatively using `brew install fastlane`
 fastlane create_app
 ```
 Create App on Developer Portal and App Store Connect
+### init_ci
+```
+fastlane init_ci
+```
+
 
 ----
 
