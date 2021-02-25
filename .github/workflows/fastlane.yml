@@ -10,7 +10,7 @@ jobs:
     name: Execute fastlane
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@main
       - name: Install Ruby Dependencies
         run: bundle install
 
