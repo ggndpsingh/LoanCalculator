@@ -14,10 +14,7 @@ platform :ios do
 
   desc "Sync code signing"
   lane :signing do
-    sync_code_signing(
-      keychain_name: "fastlane_tmp_keychain",
-      keychain_password: "password"
-    ) # match
+    match --verbose
     
     mapping = Actions.lane_context[
       SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING
