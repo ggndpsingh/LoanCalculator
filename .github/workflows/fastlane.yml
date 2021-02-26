@@ -27,4 +27,5 @@ jobs:
         run: |
           eval "$(ssh-agent -s)"
           ssh-add - <<< "${MATCH_DEPLOY_KEY}"
+          setup_ci
           bundle exec fastlane ios build
