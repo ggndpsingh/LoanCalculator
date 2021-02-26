@@ -14,8 +14,8 @@ jobs:
       - name: Install Ruby Dependencies
         run: bundle install
 
-      - name: Set up keychain
-        run: fastlane run create_keychain name:git_keychain password:password
+      - name: Set up CI
+        run: bundle exec fastlane run setup_ci
 
       - name: fastlane
         env:
@@ -27,5 +27,4 @@ jobs:
         run: |
           eval "$(ssh-agent -s)"
           ssh-add - <<< "${MATCH_DEPLOY_KEY}"
-          setup_ci
           bundle exec fastlane ios build
