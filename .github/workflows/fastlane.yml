@@ -29,5 +29,5 @@ jobs:
       - name: upload artefact to App Center
         uses: cloud-egl/AppCenter-actions-with-output@v1.0.0
         with:
-          command: appcenter distribute Internal publish -s Alpha -f build/ios/LocalCalculator.ios
+          command: appcenter distribute release -f build/ios/LoanCalculator.ipa -g Internal --app LoanCalculator
           token: ${{secrets.APP_CENTER_TOKEN}}
