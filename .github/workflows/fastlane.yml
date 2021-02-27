@@ -16,6 +16,9 @@ jobs:
       - uses: actions/checkout@v2
       - name: Install Ruby Dependencies
         run: bundle install
+        
+      - name: Set Build Number
+        run: bundle exec fastlane run increment_build_number build_number:${{ github.run_number }}
 
       - name: fastlane
         env:
