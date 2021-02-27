@@ -27,7 +27,7 @@ jobs:
           bundle exec fastlane ios build
 
       - name: upload artefact to App Center
-        uses: joabalea/App-Center-action@v1.0.2
+        uses: cloud-egl/AppCenter-actions-with-output@v1.0.0
         with:
           command: appcenter distribute Internal publish -s Alpha -f build/ios/LocalCalculator.ios
           token: ${{secrets.APP_CENTER_TOKEN}}
