@@ -14,7 +14,7 @@ platform :ios do
 
   desc "Sync code signing"
   lane :signing do
-    match(
+    sync_code_signing(
       verbose: true
     )
     

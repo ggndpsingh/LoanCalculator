@@ -14,9 +14,6 @@ jobs:
       - name: Install Ruby Dependencies
         run: bundle install
 
-      - name: Set up CI
-        run: bundle exec fastlane run setup_ci
-
       - name: fastlane
         env:
           FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD  }}
