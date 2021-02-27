@@ -25,3 +25,12 @@ jobs:
           eval "$(ssh-agent -s)"
           ssh-add - <<< "${MATCH_DEPLOY_KEY}"
           bundle exec fastlane ios build
+
+      - name: upload artefact to App Center
+        uses: wzieba/AppCenter-Github-Action@v1
+        with:
+          appName: Loan Calculator
+          token: ${{secrets.APP_CENTER_TOKEN}}
+          file: build/ios/LoanCalculator.ipa
+          notifyTesters: true
+          debug: false
