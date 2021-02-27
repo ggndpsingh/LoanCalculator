@@ -27,7 +27,7 @@ jobs:
           bundle exec fastlane ios build
 
       - name: upload artefact to App Center
-        uses: zackify/App-Center-action@v1.0.0
+        uses: zackify/App-Center-action
         with:
           appName: LoanCalculator
           token: ${{secrets.APP_CENTER_TOKEN}}
