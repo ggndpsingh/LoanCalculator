@@ -14,7 +14,9 @@ platform :ios do
 
   desc "Sync code signing"
   lane :signing do
-    match --verbose
+    match(
+      verbose: true
+    )
     
     mapping = Actions.lane_context[
       SharedValues::MATCH_PROVISIONING_PROFILE_MAPPING
@@ -27,7 +29,9 @@ platform :ios do
   desc "Build binary"
   lane :build do
     signing
-    build_ios_app # gym
+    build_ios_app(
+      verbose: true
+    ) # gym
   end
 
   desc "Release"
@@ -39,7 +43,7 @@ end
 
 lane :init_ci do
   github_action(
-    api_token: "36af7d9743b7a5a367b0211b3d8f4afa9bae1e42",
+    api_token: "3a859b7022f1e10dfd9cf7ecb1acba9308dfb0d4",
     org: "ggndpsingh",
     repo: "LoanCalculator",
     match_org: "ggndpsingh",
