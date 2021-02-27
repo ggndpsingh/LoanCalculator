@@ -19,6 +19,7 @@ jobs:
           FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD  }}
           MATCH_DEPLOY_KEY: ${{ secrets.MATCH_DEPLOY_KEY  }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD  }}
+          APP_CENTER_TOKEN: ${{ secrets.APP_CENTER_TOKEN  }}
           GIT_SSH_COMMAND: "ssh -o StrictHostKeyChecking=no"
           MATCH_READONLY: true
         run: |
