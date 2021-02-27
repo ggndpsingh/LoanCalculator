@@ -27,7 +27,9 @@ jobs:
           bundle exec fastlane ios build
 
       - name: upload artefact to App Center
-        uses: cloud-egl/AppCenter-actions-with-output@v1.0.0
+        uses: wzieba/App-Center-action@v1.0.0
         with:
-          command: appcenter distribute release -f build/ios/LoanCalculator.ipa -g Internal --app LoanCalculator
+          appName: LoanCalculator
           token: ${{secrets.APP_CENTER_TOKEN}}
+          group: Internal
+          file: build/ios/LoanCalculator.ips
