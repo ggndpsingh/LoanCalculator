@@ -14,7 +14,17 @@ platform :ios do
 
   desc "Sync code signing"
   lane :signing do
-    sync_code_signing(
+    create_keychain(
+      name: "CI",
+      password: ENV["MATCH_PASSWORD"],
+      default_keychain: true,
+      unlock: true,
+      timeout: 3600,
+      lock_when_sleeps: false
+    )
+    match(
+      keychain_name: "CI",
+      keychain_password: ENV["MATCH_PASSWORD"],
       verbose: true
     )
     
