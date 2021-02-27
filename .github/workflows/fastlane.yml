@@ -5,11 +5,14 @@ on:
     branches:
       - main
 
-jobs:
+jobs:    
   build_dev:
     name: Execute fastlane
     runs-on: macos-latest
     steps:
+      - name: Output Run ID
+        run: echo ${{ github.run_id }}
+    
       - uses: actions/checkout@v2
       - name: Install Ruby Dependencies
         run: bundle install
