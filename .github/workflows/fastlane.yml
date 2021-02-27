@@ -27,10 +27,7 @@ jobs:
           bundle exec fastlane ios build
 
       - name: upload artefact to App Center
-        uses: wzieba/AppCenter-Github-Action@v1
+        uses: joabalea/App-Center-action@v1.0.2
         with:
-          appName: Loan Calculator
+          command: appcenter distribute Internal publish -s Alpha -f build/ios/LocalCalculator.ios
           token: ${{secrets.APP_CENTER_TOKEN}}
-          file: build/ios/LoanCalculator.ipa
-          notifyTesters: true
-          debug: false
