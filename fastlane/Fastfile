@@ -44,20 +44,23 @@ platform :ios do
     ) # gym
   end
 
+  desc "Upload to App Center"
+  lane :upload_to_appcenter do
+    build
+
+    appcenter_upload(
+      api_token: ENV["APP_CENTER_TOKEN"],
+      owner_name: "ggndpsingh",
+      owner_type: "user", # Default is user - set to organization for appcenter organizations
+      app_name: "LoanCalculator",
+      file: "build/ios/LoanCalculator.ipa",
+      notify_testers: false # Set to false if you don't want to notify testers of your new release (default: `false`)
+    )
+  end
+
   desc "Release"
   lane :release do
     build
     upload_to_app_store # deliver
   end
-end
-
-lane :init_ci do
-  github_action(
-    api_token: "3a859b7022f1e10dfd9cf7ecb1acba9308dfb0d4",
-    org: "ggndpsingh",
-    repo: "LoanCalculator",
-    match_org: "ggndpsingh",
-    match_repo: "fastlane-match-repo",
-    dotenv_paths: ["fastlane/.env.secret"] # optional
-  )
 end

@@ -24,10 +24,4 @@ jobs:
         run: |
           eval "$(ssh-agent -s)"
           ssh-add - <<< "${MATCH_DEPLOY_KEY}"
-          bundle exec fastlane ios build
-
-      - name: App Center CLI
-        uses: avocaddo/AppCenter-Github-Action@v1.0.2
-        with:
-          command: appcenter distribute release -g Internal -f build/ios/LoanCalculator.ipa -r releaseNote -a LoanCalculator
-          token: ${{secrets.APP_CENTER_TOKEN}}
+          bundle exec fastlane ios upload_to_appcenter
