@@ -16,7 +16,7 @@ jobs:
       - uses: actions/cache@v2
         id: restore-build
         with:
-          path: ../*
+          path: /*
           key: ${{ github.sha }}
     
   build_project:
@@ -27,7 +27,7 @@ jobs:
     - uses: actions/cache@v2
       id: restore-build
       with:
-        path: ../*
+        path: /*
         key: ${{ github.sha }}
 
     - name: Set Build Number
