@@ -31,18 +31,26 @@ jobs:
     runs-on: macos-latest
     needs: setup_dependencies
     steps:
-    - name: Set Build Number
-      run: bundle exec fastlane run increment_build_number build_number:${{ github.run_number }}
+      - uses: actions/cache@v2
+        id: restore-build
+        with:
+          path: |
+            Gemfile
+            Gemfile.lock
+          key: ${{ runner.os }}-fastlane
+          
+      - name: Set Build Number
+        run: bundle exec fastlane run increment_build_number build_number:${{ github.run_number }}
 
-    - name: fastlane
-      env:
-        FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD  }}
-        MATCH_DEPLOY_KEY: ${{ secrets.MATCH_DEPLOY_KEY  }}
-        MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD  }}
-        APP_CENTER_TOKEN: ${{ secrets.APP_CENTER_TOKEN  }}
-        GIT_SSH_COMMAND: "ssh -o StrictHostKeyChecking=no"
-        MATCH_READONLY: true
-      run: |
-        eval "$(ssh-agent -s)"
-        ssh-add - <<< "${MATCH_DEPLOY_KEY}"
-        bundle exec fastlane ios upload_to_appcenter
+      - name: fastlane
+        env:
+          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD  }}
+          MATCH_DEPLOY_KEY: ${{ secrets.MATCH_DEPLOY_KEY  }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD  }}
+          APP_CENTER_TOKEN: ${{ secrets.APP_CENTER_TOKEN  }}
+          GIT_SSH_COMMAND: "ssh -o StrictHostKeyChecking=no"
+          MATCH_READONLY: true
+        run: |
+          eval "$(ssh-agent -s)"
+          ssh-add - <<< "${MATCH_DEPLOY_KEY}"
+          bundle exec fastlane ios upload_to_appcenter
