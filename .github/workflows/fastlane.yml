@@ -35,14 +35,16 @@ jobs:
         with:
           path: vendor
           key: ${{ runner.os }}-fastlane
-          run:
-            ls
-            cd vendor
-            ls
-            cd bundle
-            ls
-            cd ruby
-            ls
+
+      - name: Check cache
+        run: |
+          ls
+          cd vendor
+          ls
+          cd bundle
+          ls
+          cd ruby
+          ls
           
       - name: Set Build Number
         run: fastlane run increment_build_number build_number:${{ github.run_number }}
