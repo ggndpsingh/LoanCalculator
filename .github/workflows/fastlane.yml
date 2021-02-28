@@ -16,20 +16,18 @@ jobs:
       - uses: actions/cache@v2
         id: restore-build
         with:
-          path: /Users/runner/work/LoanCalculator
-          key: ${{ github.sha }}
+          path: ./*
+          key: ${{ runner.os }}-fastlane
+          restore-keys: |
+            ${{ runner.os }}-fastlane
+            ${{ runner.os }}
+            fastlane
     
   build_project:
     name: Build Project
     runs-on: macos-latest
     needs: setup_dependencies
     steps:
-    - uses: actions/cache@v2
-      id: restore-build
-      with:
-        path: /Users/runner/work/LoanCalculator
-        key: ${{ github.sha }}
-
     - name: Set Build Number
       run: bundle exec fastlane run increment_build_number build_number:${{ github.run_number }}
 
