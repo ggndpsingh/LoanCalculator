@@ -38,6 +38,7 @@ jobs:
 
       - name: Check cache
         run: |
+          pwd
           ls
           cd vendor
           ls
