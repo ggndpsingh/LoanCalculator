@@ -13,7 +13,7 @@ jobs:
       - uses: actions/cache@v2
         id: restore-build
         with:
-          paths: |
+          path: |
             Gemfile
             Gemfile.lock
           key: ${{ runner.os }}-fastlane
