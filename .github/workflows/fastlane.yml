@@ -13,7 +13,7 @@ jobs:
       - uses: actions/cache@v2
         id: restore-build
         with:
-          path: vendor/bundle
+          path: vendor
           key: ${{ runner.os }}-fastlane
           restore-keys: |
             ${{ runner.os }}-fastlane
@@ -33,7 +33,7 @@ jobs:
         uses: actions/cache@v2
         id: restore-build
         with:
-          path: vendor/bundle
+          path: vendor
           key: ${{ runner.os }}-fastlane
           
       - name: Set Build Number
